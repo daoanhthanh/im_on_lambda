@@ -1,0 +1,9 @@
+.idea
+.vscode
+imagemagick
+bun.lockb
+*.zip
+package-lock.json
+tmp/*
+node_modules
+.DS_Store
