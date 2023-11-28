@@ -1,25 +1,15 @@
-FROM --platform=arm64 arm64v8/amazonlinux:2
+FROM --platform=arm64 public.ecr.aws/lambda/nodejs:20.2023.11.21.13-arm64
 
+COPY imagemagick/bin /usr/bin
+COPY imagemagick/etc /usr/etc
+COPY imagemagick/include /usr/include
+COPY imagemagick/lib /usr/lib
+COPY imagemagick/share /usr/share
 
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+COPY node_modules ${LAMBDA_TASK_ROOT}/node_modules
+COPY *.js ${LAMBDA_TASK_ROOT}/
+COPY package.json ${LAMBDA_TASK_ROOT}/package.json
 
-# Set up nvm environment variables
-ENV NVM_DIR=/root/.nvm
-ENV NODE_VERSION 20.9.0
-# ENV NODE_VERSION 16
+WORKDIR ${LAMBDA_TASK_ROOT}
 
-
-RUN yum install -y tar gzip which
-
-RUN source "$NVM_DIR/nvm.sh" \
-  && nvm install "$NODE_VERSION" \
-  && nvm alias default "$NODE_VERSION" \
-  && nvm use default \
-  && npm install -g npm
-
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:"$NVM_DIR"/versions/node/v"$NODE_VERSION"/bin
-
-
-WORKDIR /root/result
-
-#docker run -it --rm -v $(pwd):/root/result <docker_image>
+CMD [ "index.handler" ]

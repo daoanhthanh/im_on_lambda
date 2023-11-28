@@ -1,7 +1,7 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import fs from "fs";
 import { fileTypeFromBuffer } from "file-type";
-import { execFile } from "child_process";
+import { exec } from "child_process";
 import path from "path";
 
 const s3Bucket = "lamda-func-output";
@@ -21,22 +21,21 @@ const client = new S3Client({
  * @returns {Promise<String>} path of the image, with extension
  */
 const downloadImage = async (url, name) => {
-	return await fetch(url)
-		.then((response) => {
-			return response.arrayBuffer();
-		})
-		.then(async (arrayBuffer) => {
-			const fileType = await fileTypeFromBuffer(arrayBuffer);
-			const outputFilePath = path.resolve(`/tmp/${name}.${fileType.ext}`);
-			fs.writeFileSync(outputFilePath, Buffer.from(arrayBuffer), (err) => {
-				if (err) {
-					console.error(err);
-				} else {
-					console.log("Image downloaded successfully");
-				}
-			});
-			return outputFilePath;
-		});
+	console.log("Downloading image", url);
+
+	const response = await fetch(url);
+	const bodyAsBuffer = await response.arrayBuffer();
+	const fileType = await fileTypeFromBuffer(bodyAsBuffer);
+	const outputFilePath = path.resolve(`/tmp/${name}.${fileType.ext}`);
+
+	try {
+		fs.writeFileSync(outputFilePath, Buffer.from(bodyAsBuffer));
+		console.log("Image downloaded successfully");
+	} catch (err) {
+		console.error(err);
+	}
+
+	return outputFilePath;
 };
 
 /**
@@ -44,27 +43,21 @@ const downloadImage = async (url, name) => {
  * @param {String} imagePath: relative path of the image, usually the output of `downloadImage`
  * @param {number} width width of the image, mandatory
  * @param {number} height height of the image, optional
- * @returns {String} path of the image which is resized and overwritten, with extension
  */
 const resize = async (imagePath, width, height = undefined) => {
-	fs.access(imagePath, fs.F_OK, (err) => {
-		if (err) {
-			console.error(err);
-		}
-
-		console.log("Image exists", imagePath);
-	});
 	await new Promise((resolve, reject) => {
 		const spec = height ? `${width}x${height}` : `${width}`;
-		execFile(
-			"./imagemagick/bin/magick",
-			[imagePath, "-resize", spec, imagePath],
+
+		exec(
+			`magick ${imagePath} -resize ${spec} ${imagePath}`,
 			(error, stdout, stderr) => {
 				if (stderr) {
-					console.log(`stderr: ${stderr}`);
+					const lineErr = stderr.split("\n");
+					lineErr.forEach((line) => console.error(line));
 					return;
 				}
 				if (error !== null) {
+					console.error(`exec error: ${error}`);
 					reject(error);
 				} else {
 					console.log("Done!", stdout);
@@ -85,7 +78,6 @@ const toS3 = async (imagePath) => {
 	console.log("Uploading to S3", imagePath);
 	const imageName = imagePath.split("/").pop();
 	const imageBuffer = fs.readFileSync(imagePath);
-	// const key = `${fileName}.${contentType.ext}`;
 	const params = {
 		Bucket: s3Bucket,
 		Key: imageName,

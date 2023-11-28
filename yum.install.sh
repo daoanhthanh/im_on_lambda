@@ -30,12 +30,12 @@ chmod +x configure
 
 PKG_CONFIG_PATH=/root/build/cache/lib/pkgconfig \
   ./configure \
-    CPPFLAGS=-I/root/build/cache/include \
-    LDFLAGS=-L/root/build/cache/lib \
-    --disable-dependency-tracking \
-    --disable-shared \
-    --enable-static \
-    --prefix=/root/build/cache
+  CPPFLAGS=-I/root/build/cache/include \
+  LDFLAGS=-L/root/build/cache/lib \
+  --disable-dependency-tracking \
+  --disable-shared \
+  --enable-static \
+  --prefix=/root/build/cache
 
 dos2unix -f libtool
 
